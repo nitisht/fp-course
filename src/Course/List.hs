@@ -42,6 +42,10 @@ infixr 5 :.
 instance Show t => Show (List t) where
   show = show . foldRight (:) []
 
+isEmptyTrial :: List t -> Bool
+isEmptyTrial Nil = True
+isEmptyTrial (t :. _) = False
+
 -- The list of integers from zero to infinity.
 infinity ::
   List Integer
@@ -75,8 +79,9 @@ headOr ::
   a
   -> List a
   -> a
-headOr =
-  error "todo: Course.List#headOr"
+headOr x Nil = x
+headOr t (x :. xs) = x
+  -- error "todo: Course.List#headOr"
 
 -- | The product of the elements of a list.
 --
@@ -91,8 +96,13 @@ headOr =
 product ::
   List Int
   -> Int
-product =
-  error "todo: Course.List#product"
+product Nil = 1
+product ( t :. ts ) = t * product ts
+
+-- findInList :: a -> List a -> Bool
+-- findInList x Nil = False
+-- findInList t (x :. xs) = 
+--   if t == x 
 
 -- | Sum the elements of the list.
 --
@@ -106,8 +116,9 @@ product =
 sum ::
   List Int
   -> Int
-sum =
-  error "todo: Course.List#sum"
+sum Nil = 0
+sum (t :. ts) = t + sum ts
+  
 
 -- | Return the length of the list.
 --
@@ -118,8 +129,8 @@ sum =
 length ::
   List a
   -> Int
-length =
-  error "todo: Course.List#length"
+length Nil = 0
+length (x :. xs) = 1 + length xs
 
 -- | Map the given function on each element of the list.
 --
@@ -133,8 +144,8 @@ map ::
   (a -> b)
   -> List a
   -> List b
-map =
-  error "todo: Course.List#map"
+map f Nil = Nil
+map f (t :. ts) = (f t :. map f ts)
 
 -- | Return elements satisfying the given predicate.
 --
@@ -150,8 +161,18 @@ filter ::
   (a -> Bool)
   -> List a
   -> List a
-filter =
-  error "todo: Course.List#filter"
+filter f Nil = Nil
+filter f (t :. ts) = 
+  if f t == True then
+    t :. filter f ts
+  else 
+    filter f ts
+
+-- foldRight :: (a -> List a -> List a) -> List a -> List a -> List a
+filter' :: (a -> Bool) -> List a -> List a
+filter' f ts = foldRight (\t rs -> if f t == True then
+                                          t :. rs
+                                        else rs) Nil ts
 
 -- | Append two lists to a new list.
 --
