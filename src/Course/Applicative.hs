@@ -47,14 +47,14 @@ instance Applicative ExactlyOne where
   pure ::
     a
     -> ExactlyOne a
-  pure =
-    error "todo: Course.Applicative pure#instance ExactlyOne"
+  pure a = ExactlyOne a
+    
   (<*>) :: 
     ExactlyOne (a -> b)
     -> ExactlyOne a
     -> ExactlyOne b
-  (<*>) =
-    error "todo: Course.Applicative (<*>)#instance ExactlyOne"
+  (<*>) (ExactlyOne f) (ExactlyOne a) = ExactlyOne (f a)
+    
 
 -- | Insert into a List.
 --
@@ -66,14 +66,15 @@ instance Applicative List where
   pure ::
     a
     -> List a
-  pure =
-    error "todo: Course.Applicative pure#instance List"
+  pure a = (a :. Nil)
   (<*>) ::
     List (a -> b)
     -> List a
     -> List b
-  (<*>) =
-    error "todo: Course.Apply (<*>)#instance List"
+  (<*>) Nil Nil = Nil
+  (<*>) Nil (a :. as) = Nil
+  (<*>) (f :. fs) Nil = Nil
+  (<*>) (f :. fs) as = (++) ((<$>) f as) ((<*>) fs as)
 
 -- | Insert into an Optional.
 --
@@ -91,14 +92,17 @@ instance Applicative Optional where
   pure ::
     a
     -> Optional a
-  pure =
-    error "todo: Course.Applicative pure#instance Optional"
+  pure = Full
+
   (<*>) ::
     Optional (a -> b)
     -> Optional a
     -> Optional b
-  (<*>) =
-    error "todo: Course.Apply (<*>)#instance Optional"
+  (<*>) Empty Empty = Empty
+  (<*>) Empty (Full a) = Empty
+  (<*>) (Full f) Empty = Empty
+  (<*>) (Full f) (Full a) = mapOptional f (Full a)
+
 
 -- | Insert into a constant function.
 --
@@ -122,15 +126,18 @@ instance Applicative ((->) t) where
   pure ::
     a
     -> ((->) t a)
-  pure =
-    error "todo: Course.Applicative pure#((->) t)"
-  (<*>) ::
-    ((->) t (a -> b))
-    -> ((->) t a)
-    -> ((->) t b)
-  (<*>) =
-    error "todo: Course.Apply (<*>)#instance ((->) t)"
+  pure a = \x -> a
 
+  (<*>) ::
+    ((->) t (a -> b)) -- t -> a -> b  == f
+    -> ((->) t a) -- t -> a == g
+    -> ((->) t b) -- t -> b == return
+  (<*>) f g = \t -> f t (g t)
+
+  -- >>> ((+) <*> (+10)) 3
+  -- ((3+) <*> (3 + 10))
+  -- (3+) <*> 13
+  -- 16
 
 -- | Apply a binary function in the environment.
 --
@@ -157,9 +164,12 @@ lift2 ::
   -> f a
   -> f b
   -> f c
-lift2 =
-  error "todo: Course.Applicative#lift2"
-
+lift2 f a b = f <$> a <*> b
+  
+-- g => (a -> b -> c)
+-- g => f(a -> b)
+-- f(a -> b)
+-- 
 -- | Apply a ternary function in the environment.
 -- /can be written using `lift2` and `(<*>)`./
 --
@@ -181,7 +191,7 @@ lift2 =
 -- >>> lift3 (\a b c -> a + b + c) Empty Empty (Full 9)
 -- Empty
 --
--- >>> lift3 (\a b c -> a + b + c) length sum product (listh [4,5,6])
+-- >>> +lift3 (\a b c -> a + b + c) length sum product (listh [4,5,6])
 -- 138
 lift3 ::
   Applicative f =>
@@ -190,8 +200,7 @@ lift3 ::
   -> f b
   -> f c
   -> f d
-lift3 =
-  error "todo: Course.Applicative#lift3"
+lift3 f a b c = lift2 f a b <*> c
 
 -- | Apply a quaternary function in the environment.
 -- /can be written using `lift3` and `(<*>)`./
@@ -224,16 +233,14 @@ lift4 ::
   -> f c
   -> f d
   -> f e
-lift4 =
-  error "todo: Course.Applicative#lift4"
+lift4 f a b c d = lift3 f a b c <*> d
 
 -- | Apply a nullary function in the environment.
 lift0 ::
   Applicative f =>
   a
   -> f a
-lift0 =
-  error "todo: Course.Applicative#lift0"
+lift0 = pure 
 
 -- | Apply a unary function in the environment.
 -- /can be written using `lift0` and `(<*>)`./
@@ -251,8 +258,7 @@ lift1 ::
   (a -> b)
   -> f a
   -> f b
-lift1 =
-  error "todo: Course.Applicative#lift1"
+lift1 f a = lift0 f <*> a
 
 -- | Apply, discarding the value of the first argument.
 -- Pronounced, right apply.
@@ -277,8 +283,13 @@ lift1 =
   f a
   -> f b
   -> f b
-(*>) =
-  error "todo: Course.Applicative#(*>)"
+(*>) a b = (pure (\x y -> y)) <*> a <*> b
+-- pure (\x y -> y) :: f (a -> b')
+-- <*> :: f (a -> b') -> f a -> f (b -> b)
+-- pure (\x y -> y) <*> fa :: 
+-- b' :: b -> b
+
+
 
 -- | Apply, discarding the value of the second argument.
 -- Pronounced, left apply.
@@ -303,8 +314,7 @@ lift1 =
   f b
   -> f a
   -> f b
-(<*) =
-  error "todo: Course.Applicative#(<*)"
+(<*) b a = (pure (\x y -> x)) <*> b <*> a
 
 -- | Sequences a list of structures to a structure of list.
 --
